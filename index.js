@@ -50,6 +50,17 @@ app.get('/', (req, res) => {
     // res.redirect('https://www.google.com/');
 });
 
+// redirect all other mistakes by user (pages that do not exist) to a meaningful warning
+app.get("*", (req,res) => {
+	res.status(404);
+	res.send(`
+    <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
+      <h1>Sorry, This page does not exist - 404</h1>
+      <h3>You might want to check your URL ^_^</h3>
+    </div>
+  `);
+});
+
 /*
   starts the application listening on the specified port ('port') and logs a message to the console
   indicating which port the application is listening on.
