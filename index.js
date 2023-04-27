@@ -57,23 +57,42 @@ app.get('/about', (req,res) => {
   res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
 });
 
+app.get('/contact', (req,res) => {
+  var missingEmail = req.query.missing;
+  var html = `
+      email address:
+      <form action='/submitEmail' method='post'>
+          <input name='email' type='text' placeholder='email'>
+          <button>Submit</button>
+      </form>
+  `;
+  if (missingEmail) {
+      html += "<br> email is required";
+  }
+  res.send(html);
+});
+
+
+app.use(express.static(__dirname + "/public"));
+
 //show cat images
 app.get('/cat/:id', (req,res) => {
 
   var cat = req.params.id;
 
   if (cat == 1) {
-      res.send("Fluffy: <img src='fluffy.gif' style='width:250px;'>");
+    res.send("<div style='text-align:center; margin-top: 10%;'>Fluffy:<br><img src='/fluffy.gif' style='width:250px; border: 1px solid black;'></div>");
+      // res.send("Fluffy: <img src='/fluffy.gif' style='width:250px;'>");
   }
   else if (cat == 2) {
-      res.send("Socks: <img src='socks.gif' style='width:250px;'>");
+    res.send("<div style='text-align:center; margin-top: 10%;'>Socks:<br><img src='/socks.gif' style='width:250px; border: 1px solid black;'></div>");
+    // res.send("Socks: <img src='/socks.gif' style='width:250px;'>");
   }
   else {
-      res.send("Invalid cat id: "+cat);
+    // res.send("Invalid cat id: "+cat);
+    res.send("<div style='text-align:center; background-color: #ffcccc; padding: 10px; border-radius: 5px;'>Invalid cat id: " + cat + "</div>");
   }
 });
-
-app.use(express.static(__dirname + "/public"));
 
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
 app.get("*", (req,res) => {
