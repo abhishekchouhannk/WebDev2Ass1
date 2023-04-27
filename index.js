@@ -50,6 +50,31 @@ app.get('/', (req, res) => {
     // res.redirect('https://www.google.com/');
 });
 
+// catches the /about route
+app.get('/about', (req,res) => {
+  var color = req.query.color;
+
+  res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
+});
+
+//show cat images
+app.get('/cat/:id', (req,res) => {
+
+  var cat = req.params.id;
+
+  if (cat == 1) {
+      res.send("Fluffy: <img src='fluffy.gif' style='width:250px;'>");
+  }
+  else if (cat == 2) {
+      res.send("Socks: <img src='socks.gif' style='width:250px;'>");
+  }
+  else {
+      res.send("Invalid cat id: "+cat);
+  }
+});
+
+app.use(express.static(__dirname + "/public"));
+
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
 app.get("*", (req,res) => {
 	res.status(404);
