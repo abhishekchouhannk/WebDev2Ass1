@@ -1,5 +1,6 @@
 const express = require('express'); // imports the express.js module and assigns it to a constant variable named express
 const session = require('express-session'); // imports the sessions library.
+const MongoStore = require('connect-mongo');
 const Joi = require("joi"); // input field validation library
 const bcrypt = require('bcrypt');
 const saltRounds = 12;
@@ -11,13 +12,14 @@ const saltRounds = 12;
 */
 const app = express();  
 
+const expireTime = 1 * 60 * 60 * 1000; //expires after 1 day  (hours * minutes * seconds * millis)
+
 var users = []; 
 
-app.use(express.urlencoded({extended: false}));
-
-// sets the port the application will listen on. checks if 'PORT' environment variable is set
-// if it is, it uses that value. If not set, it defaults to port 3020.
-const port = process.env.PORT || 3020;
+/* secret information section */
+const mongodb_user = "achouhan4";
+const mongodb_password = "B1V6JD7YCOCoYmQx";
+// const mongodb_password = "@B#|$#3Katlas";
 
 // will add a process that can validate these sessions
 // and so that a user cannot mess with sessionIDs and try to get in as someone else
@@ -25,16 +27,26 @@ const port = process.env.PORT || 3020;
 // are next to impossible
 const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
 
-// telling the app to use sessions,
-// by default the sessions are being stored in the RAM,
-// however we'll save them in a database soon
-app.use(session({
-    secret: node_session_secret,
-    // store: mongoStore, // default is memory store
-    saveUninitialized: false,
-    resave: true
+/* END secret section */
+
+
+app.use(express.urlencoded({extended: false}));
+
+var mongoStore = MongoStore.create({
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@a-1.zyajbsk.mongodb.net/a-1`
+})
+
+app.use(session({ 
+  secret: node_session_secret,
+	store: mongoStore, //default is memory store 
+	saveUninitialized: false, 
+	resave: true
 }
 ));
+
+// sets the port the application will listen on. checks if 'PORT' environment variable is set
+// if it is, it uses that value. If not set, it defaults to port 3020.
+const port = process.env.PORT || 3020;
 
 // counting the number of visits to the home page.
 var numPageHits = 0;
@@ -110,7 +122,10 @@ app.post('/loggingin', (req,res) => {
   for (i = 0; i < users.length; i++) {
       if (users[i].username == username) {
           if (bcrypt.compareSync(password, users[i].password)) {
-              res.redirect('/loggedIn');
+              req.session.authenticated = true;
+              req.session.username = username;
+              req.session.cookie.maxAge = expireTime;
+              res.redirect('/loggedin');
               return;
           }
       }
@@ -122,6 +137,9 @@ app.post('/loggingin', (req,res) => {
 });
 
 app.get('/loggedin', (req,res) => {
+  if (!req.session.authenticated) {
+      res.redirect('/login');
+  }
   var html = `
   You are logged in!
   `;
