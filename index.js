@@ -1,5 +1,8 @@
 const express = require('express'); // imports the express.js module and assigns it to a constant variable named express
 const session = require('express-session'); // imports the sessions library.
+const Joi = require("joi"); // input field validation library
+const bcrypt = require('bcrypt');
+const saltRounds = 12;
 
 /*
   creates an instance of the Express application by calling the express function.
@@ -7,6 +10,10 @@ const session = require('express-session'); // imports the sessions library.
   thus, 'app' const is an express app instance.
 */
 const app = express();  
+
+var users = []; 
+
+app.use(express.urlencoded({extended: false}));
 
 // sets the port the application will listen on. checks if 'PORT' environment variable is set
 // if it is, it uses that value. If not set, it defaults to port 3020.
@@ -50,11 +57,32 @@ app.get('/', (req, res) => {
     // res.redirect('https://www.google.com/');
 });
 
-// catches the /about route
-app.get('/about', (req,res) => {
-  var color = req.query.color;
+app.get('/createUser', (req,res) => {
+  var html = `
+  <form action='/submitUser' method='post'>
+  <input name='username' type='text' placeholder='username'>
+  <input name='password' type='password' placeholder='password'>
+  <button>Submit</button>
+  </form>
+  `;
+  res.send(html);
+});
 
-  res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
+app.post('/submitUser', (req,res) => {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  users.push({ username: username, password: password });
+
+  console.log(users);
+
+  var usershtml = "";
+  for (i = 0; i < users.length; i++) {
+      usershtml += "<li>" + users[i].username + ": " + users[i].password + "</li>";
+  }
+
+  var html = "<ul>" + usershtml + "</ul>";
+  res.send(html);
 });
 
 app.get('/contact', (req,res) => {
@@ -72,8 +100,22 @@ app.get('/contact', (req,res) => {
   res.send(html);
 });
 
+app.post('/submitEmail', (req,res) => {
+  var email = req.body.email;
+  if (!email) {
+      res.redirect('/contact?missing=1');
+  }
+  else {
+      res.send("Thanks for subscribing with your email: "+email);
+  }
+});
 
-app.use(express.static(__dirname + "/public"));
+// catches the /about route
+app.get('/about', (req,res) => {
+  var color = req.query.color;
+
+  res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
+});
 
 //show cat images
 app.get('/cat/:id', (req,res) => {
@@ -93,6 +135,8 @@ app.get('/cat/:id', (req,res) => {
     res.send("<div style='text-align:center; background-color: #ffcccc; padding: 10px; border-radius: 5px;'>Invalid cat id: " + cat + "</div>");
   }
 });
+
+app.use(express.static(__dirname + "/public"));
 
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
 app.get("*", (req,res) => {
