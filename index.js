@@ -12,7 +12,7 @@ const saltRounds = 12;
 */
 const app = express();  
 
-const expireTime = 1 * 60 * 60 * 1000; //expires after 1 day  (hours * minutes * seconds * millis)
+const expireTime = 1 * 60 * 60 * 1000; //expires after 1 hour  (hours * minutes * seconds * millis)
 
 var users = []; 
 
@@ -26,6 +26,7 @@ const mongodb_password = "B1V6JD7YCOCoYmQx";
 // chances of two people creating the same session ID either intentionally or maliciously 
 // are next to impossible
 const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
+const mongodb_session_secret = "3ce72a05-c5b6-4bbe-9517-e2f5c8e8e8a2";
 
 /* END secret section */
 
@@ -33,7 +34,10 @@ const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
 app.use(express.urlencoded({extended: false}));
 
 var mongoStore = MongoStore.create({
-	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@a-1.zyajbsk.mongodb.net/a-1`
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@a-1.zyajbsk.mongodb.net/a-1`,
+  crypto: {
+		secret: mongodb_session_secret
+	}
 })
 
 app.use(session({ 
