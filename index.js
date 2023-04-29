@@ -22,19 +22,6 @@ const mongodb_user = process.env.MONGODB_USER;
 const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
-// const mongodb_user = "achouhan4";
-// const mongodb_password = "B1V6JD7YCOCoYmQx";
-// const mongodb_password = "@B#|$#3Katlas";
-
-// will add a process that can validate these sessions
-// and so that a user cannot mess with sessionIDs and try to get in as someone else
-// chances of two people creating the same session ID either intentionally or maliciously 
-// are next to impossible
-// const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
-// const mongodb_session_secret = "3ce72a05-c5b6-4bbe-9517-e2f5c8e8e8a2";
-
-/* END secret section */
-
 
 app.use(express.urlencoded({extended: false}));
 
@@ -75,20 +62,11 @@ app.get('/', (req, res) => {
     }
     // numPageHits++;
     res.send(`Number of visits: ${req.session.numPageHits}`);
-    // res.redirect('https://www.google.com/');
 });
 
 app.get('/createUser', (req,res) => {
-  // var html = `
-  // Create User
-  // <form action='/submitUser' method='post'>
-  // <input name='username' type='text' placeholder='username'>
-  // <input name='password' type='password' placeholder='password'>
-  // <button>Submit</button>
-  // </form>
-  // `;
   var html = `
-  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%;">Welcome, register as new user here</h2>
+  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%; font-family: 'Comic Sans MS'">Welcome, register as new user here</h2>
   <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
     <h2 style="color: #333; text-align: center;">Sign Up</h2>
     <form action='/submitUser' method='post' style="display: flex; flex-direction: column;">
@@ -96,21 +74,7 @@ app.get('/createUser', (req,res) => {
     <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
     <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
     </form>
-  </div>
-`;
-  res.send(html);
-});
-
-app.get('/login', (req,res) => {
-var html = `
-  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%;">Welcome, Here you can log in to the app.</h2>
-  <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
-    <h2 style="color: #333; text-align: center;">Log In</h2>
-    <form action='/loggingin' method='post' style="display: flex; flex-direction: column;">
-    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
-    <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
-    <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
-    </form>
+    ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
   </div>
 `;
   res.send(html);
@@ -119,6 +83,12 @@ var html = `
 app.post('/submitUser', (req,res) => {
   var username = req.body.username;
   var password = req.body.password;
+  
+  // check to see if username or password was blank, redirect to signUp page, with message that fields were blank
+  if(username == "" || password == "") {
+    res.redirect("/createUser?blank=true");
+    return;
+  }
 
   // users.push({ username: username, password: password });
   var hashedPassword = bcrypt.hashSync(password, saltRounds);
@@ -135,11 +105,30 @@ app.post('/submitUser', (req,res) => {
   res.send(html);
 });
 
+app.get('/login', (req,res) => {
+var html = `
+  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%; font-family: 'Comic Sans MS'">Welcome, Here you can log in to the app.</h2>
+  <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
+    <h2 style="color: #333; text-align: center;">Log In</h2>
+    <form action='/loggingin' method='post' style="display: flex; flex-direction: column;">
+    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
+    </form>
+    ${req.query.incorrect === 'true' ? '<p style="color: red;">Incorrect username or password. Please try again.</p>' : ''}
+    ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
+  </div>
+`;
+  res.send(html);
+});
+
 app.post('/loggingin', (req,res) => {
   var username = req.body.username;
   var password = req.body.password;
-
-
+  if(username == "" || password == "") {
+    res.redirect("/login?blank=true");
+    return;
+  }
   var usershtml = "";
   for (i = 0; i < users.length; i++) {
       if (users[i].username == username) {
@@ -154,8 +143,7 @@ app.post('/loggingin', (req,res) => {
   }
 
   //user and password combination not found
-  res.redirect("/login");
-
+  res.redirect("/login?incorrect=true");
 });
 
 app.get('/loggedIn', (req,res) => {
