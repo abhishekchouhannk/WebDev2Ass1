@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express'); // imports the express.js module and assigns it to a constant variable named express
 const session = require('express-session'); // imports the sessions library.
 const MongoStore = require('connect-mongo');
@@ -12,21 +13,25 @@ const saltRounds = 12;
 */
 const app = express();  
 
-const expireTime = 1 * 60 * 60 * 1000; //expires after 1 hour  (hours * minutes * seconds * millis)
+const expireTime = 1 * 60 * 60 * 60; //expires after 1 hour, time is stored in milliseconds  (hours * minutes * seconds * millis)
 
 var users = []; 
 
 /* secret information section */
-const mongodb_user = "achouhan4";
-const mongodb_password = "B1V6JD7YCOCoYmQx";
+const mongodb_user = process.env.MONGODB_USER;
+const mongodb_password = process.env.MONGODB_PASSWORD;
+const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
+const node_session_secret = process.env.NODE_SESSION_SECRET;
+// const mongodb_user = "achouhan4";
+// const mongodb_password = "B1V6JD7YCOCoYmQx";
 // const mongodb_password = "@B#|$#3Katlas";
 
 // will add a process that can validate these sessions
 // and so that a user cannot mess with sessionIDs and try to get in as someone else
 // chances of two people creating the same session ID either intentionally or maliciously 
 // are next to impossible
-const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
-const mongodb_session_secret = "3ce72a05-c5b6-4bbe-9517-e2f5c8e8e8a2";
+// const node_session_secret = '67615885-9e8e-4ae1-9ac9-f80ecc7b81a8';
+// const mongodb_session_secret = "3ce72a05-c5b6-4bbe-9517-e2f5c8e8e8a2";
 
 /* END secret section */
 
@@ -38,7 +43,7 @@ var mongoStore = MongoStore.create({
   crypto: {
 		secret: mongodb_session_secret
 	}
-})
+});
 
 app.use(session({ 
   secret: node_session_secret,
@@ -74,26 +79,40 @@ app.get('/', (req, res) => {
 });
 
 app.get('/createUser', (req,res) => {
+  // var html = `
+  // Create User
+  // <form action='/submitUser' method='post'>
+  // <input name='username' type='text' placeholder='username'>
+  // <input name='password' type='password' placeholder='password'>
+  // <button>Submit</button>
+  // </form>
+  // `;
   var html = `
-  Create User
-  <form action='/submitUser' method='post'>
-  <input name='username' type='text' placeholder='username'>
-  <input name='password' type='password' placeholder='password'>
-  <button>Submit</button>
-  </form>
-  `;
+  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%;">Welcome, register as new user here</h2>
+  <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
+    <h2 style="color: #333; text-align: center;">Sign Up</h2>
+    <form action='/submitUser' method='post' style="display: flex; flex-direction: column;">
+    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
+    </form>
+  </div>
+`;
   res.send(html);
 });
 
 app.get('/login', (req,res) => {
-  var html = `
-  log in
-  <form action='/loggingin' method='post'>
-  <input name='username' type='text' placeholder='username'>
-  <input name='password' type='password' placeholder='password'>
-  <button>Submit</button>
-  </form>
-  `;
+var html = `
+  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%;">Welcome, Here you can log in to the app.</h2>
+  <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
+    <h2 style="color: #333; text-align: center;">Log In</h2>
+    <form action='/loggingin' method='post' style="display: flex; flex-direction: column;">
+    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
+    </form>
+  </div>
+`;
   res.send(html);
 });
 
@@ -112,7 +131,6 @@ app.post('/submitUser', (req,res) => {
   for (i = 0; i < users.length; i++) {
       usershtml += "<li>" + users[i].username + ": " + users[i].password + "</li>";
   }
-
   var html = "<ul>" + usershtml + "</ul>";
   res.send(html);
 });
@@ -129,7 +147,7 @@ app.post('/loggingin', (req,res) => {
               req.session.authenticated = true;
               req.session.username = username;
               req.session.cookie.maxAge = expireTime;
-              res.redirect('/loggedin');
+              res.redirect('/loggedIn');
               return;
           }
       }
@@ -140,9 +158,10 @@ app.post('/loggingin', (req,res) => {
 
 });
 
-app.get('/loggedin', (req,res) => {
+app.get('/loggedIn', (req,res) => {
   if (!req.session.authenticated) {
       res.redirect('/login');
+      return;
   }
   var html = `
   You are logged in!
