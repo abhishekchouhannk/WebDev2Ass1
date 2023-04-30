@@ -1,3 +1,5 @@
+require("./utils.js");
+
 require('dotenv').config();
 const express = require('express'); // imports the express.js module and assigns it to a constant variable named express
 const session = require('express-session'); // imports the sessions library.
@@ -13,20 +15,27 @@ const saltRounds = 12;
 */
 const app = express();  
 
-const expireTime = 1 * 60 * 60 * 60; //expires after 1 hour, time is stored in milliseconds  (hours * minutes * seconds * millis)
-
-var users = []; 
-
-/* secret information section */
-const mongodb_user = process.env.MONGODB_USER;
-const mongodb_password = process.env.MONGODB_PASSWORD;
-const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
-const node_session_secret = process.env.NODE_SESSION_SECRET;
-
+// By adding this middleware to your application, you can access the form data sent by the client in a URL-encoded format. 
+// This data will be available in the req.body object.
 app.use(express.urlencoded({extended: false}));
 
+const expireTime = 1 * 60 * 60 * 60; //expires after 1 hour, time is stored in milliseconds  (hours * minutes * seconds * millis)
+
+/* secret information section */
+const mongodb_host = process.env.MONGODB_HOST;
+const mongodb_user = process.env.MONGODB_USER;
+const mongodb_password = process.env.MONGODB_PASSWORD;
+const mongodb_database = process.env.MONGODB_DATABASE;
+const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
+
+const node_session_secret = process.env.NODE_SESSION_SECRET;
+
+var {database} = include('databaseConnection');
+
+const userCollection = database.db(mongodb_database).collection('users');
+
 var mongoStore = MongoStore.create({
-	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@a-1.zyajbsk.mongodb.net/a-1`,
+	mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}/a-1`,
   crypto: {
 		secret: mongodb_session_secret
 	}
@@ -44,9 +53,6 @@ app.use(session({
 // if it is, it uses that value. If not set, it defaults to port 3020.
 const port = process.env.PORT || 3020;
 
-// counting the number of visits to the home page.
-var numPageHits = 0;
-
 /*
   defines a route handler for the HTTP GET request method at the root path ('/').
   When a user visits the root path of the application, the handler function will be called
@@ -55,13 +61,14 @@ var numPageHits = 0;
   Response go to the webpage.
 */
 app.get('/', (req, res) => {
-    if (req.session.numPageHits == null) {
-        req.session.numPageHits = 1;
-    } else {
-        req.session.numPageHits++;   
-    }
-    // numPageHits++;
-    res.send(`Number of visits: ${req.session.numPageHits}`);
+  res.send("Number of visits");
+    // if (req.session.numPageHits == null) {
+    //     req.session.numPageHits = 1;
+    // } else {
+    //     req.session.numPageHits++;   
+    // }
+    // // numPageHits++;
+    // res.send(`Number of visits: ${req.session.numPageHits}`);
 });
 
 app.get('/createUser', (req,res) => {
@@ -75,12 +82,13 @@ app.get('/createUser', (req,res) => {
     <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
     </form>
     ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
+    ${req.query.invalid === 'true' ? '<p style="color: red;">Security risk detected with current Username/Password. Please try again.</p>' : ''}
   </div>
 `;
   res.send(html);
 });
 
-app.post('/submitUser', (req,res) => {
+app.post('/submitUser', async (req,res) => {
   var username = req.body.username;
   var password = req.body.password;
   
@@ -90,18 +98,31 @@ app.post('/submitUser', (req,res) => {
     return;
   }
 
-  // users.push({ username: username, password: password });
-  var hashedPassword = bcrypt.hashSync(password, saltRounds);
+  const schema = Joi.object(
+    {
+      username: Joi.string().alphanum().max(20).required(),
+      password: Joi.string().max(20).required()
+    }
+  );
 
-  users.push({ username: username, password: hashedPassword });
+  const validationResult = schema.validate({username, password});
 
-  console.log(users);
-
-  var usershtml = "";
-  for (i = 0; i < users.length; i++) {
-      usershtml += "<li>" + users[i].username + ": " + users[i].password + "</li>";
+  if (validationResult.error != null) {
+    console.log(validationResult.error);
+    res.redirect("/createUser?invalid=true");
+    return;
   }
-  var html = "<ul>" + usershtml + "</ul>";
+
+  var hashedPassword = await bcrypt.hashSync(password, saltRounds);
+
+  await userCollection.insertOne({username: username, password: hashedPassword});
+  console.log("Inserted user");
+
+  var html = `
+  <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
+  <h1>Signed up succesfully!!</h1>
+  </div>
+  `;
   res.send(html);
 });
 
@@ -117,33 +138,52 @@ var html = `
     </form>
     ${req.query.incorrect === 'true' ? '<p style="color: red;">Incorrect username or password. Please try again.</p>' : ''}
     ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
+    ${req.query.invalid === 'true' ? '<p style="color: red;">Security risk detected with current Username/Password. Please try again.</p>' : ''}
   </div>
 `;
   res.send(html);
 });
 
-app.post('/loggingin', (req,res) => {
+app.post('/loggingin', async (req,res) => {
   var username = req.body.username;
   var password = req.body.password;
+
   if(username == "" || password == "") {
     res.redirect("/login?blank=true");
     return;
   }
-  var usershtml = "";
-  for (i = 0; i < users.length; i++) {
-      if (users[i].username == username) {
-          if (bcrypt.compareSync(password, users[i].password)) {
-              req.session.authenticated = true;
-              req.session.username = username;
-              req.session.cookie.maxAge = expireTime;
-              res.redirect('/loggedIn');
-              return;
-          }
-      }
+
+  const schema = Joi.string().max(20).required();
+  const validationResult = schema.validate(username);
+  if (validationResult.error != null) {
+    console.log(validationResult.error);
+    res.redirect("/login?invalid=true");
+    return;
   }
 
-  //user and password combination not found
-  res.redirect("/login?incorrect=true");
+  const result = await userCollection.find({
+    username: username
+  }).project({username: 1, password: 1, _id: 1}).toArray();
+  console.log(result);
+
+  if(result.length != 1) {
+    console.log("user not found");
+    res.redirect("/login?incorrect=true");
+    return;
+  }
+
+  // check if password matches for the username found in the database
+  if (await bcrypt.compare(password, result[0].password)) {
+    console.log("correct password");
+    req.session.authenticated = true;
+    req.session.username = username;
+    req.session.cookie.maxAge = expireTime;
+
+    res.redirect('/loggedIn');
+  } else {
+    //user and password combination not found
+    res.redirect("/login?incorrect=true");
+  }
 });
 
 app.get('/loggedIn', (req,res) => {
@@ -155,31 +195,6 @@ app.get('/loggedIn', (req,res) => {
   You are logged in!
   `;
   res.send(html);
-});
-
-app.get('/contact', (req,res) => {
-  var missingEmail = req.query.missing;
-  var html = `
-      email address:
-      <form action='/submitEmail' method='post'>
-          <input name='email' type='text' placeholder='email'>
-          <button>Submit</button>
-      </form>
-  `;
-  if (missingEmail) {
-      html += "<br> email is required";
-  }
-  res.send(html);
-});
-
-app.post('/submitEmail', (req,res) => {
-  var email = req.body.email;
-  if (!email) {
-      res.redirect('/contact?missing=1');
-  }
-  else {
-      res.send("Thanks for subscribing with your email: "+email);
-  }
 });
 
 // catches the /about route
@@ -220,6 +235,31 @@ app.get("*", (req,res) => {
     </div>
   `);
 });
+
+// app.get('/contact', (req,res) => {
+//   var missingEmail = req.query.missing;
+//   var html = `
+//       email address:
+//       <form action='/submitEmail' method='post'>
+//           <input name='email' type='text' placeholder='email'>
+//           <button>Submit</button>
+//       </form>
+//   `;
+//   if (missingEmail) {
+//       html += "<br> email is required";
+//   }
+//   res.send(html);
+// });
+
+// app.post('/submitEmail', (req,res) => {
+//   var email = req.body.email;
+//   if (!email) {
+//       res.redirect('/contact?missing=1');
+//   }
+//   else {
+//       res.send("Thanks for subscribing with your email: "+email);
+//   }
+// });
 
 /*
   starts the application listening on the specified port ('port') and logs a message to the console
