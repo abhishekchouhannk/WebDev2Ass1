@@ -61,17 +61,23 @@ const port = process.env.PORT || 3020;
   Response go to the webpage.
 */
 app.get('/', (req, res) => {
-  res.send("Number of visits");
-    // if (req.session.numPageHits == null) {
-    //     req.session.numPageHits = 1;
-    // } else {
-    //     req.session.numPageHits++;   
-    // }
-    // // numPageHits++;
-    // res.send(`Number of visits: ${req.session.numPageHits}`);
+  var header = `<h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">Welcome to my app! This is the homepage</h1>`;
+  var notLoggedIn = (`
+    <div style="text-align: center;">
+      <form action="/signUp">
+        <button type="submit">Sign Up</button>
+      </form>
+      <form action="/login">
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  `);
+  if (!req.session.authenticated) {
+    res.send(header + notLoggedIn);
+  } 
 });
 
-app.get('/createUser', (req,res) => {
+app.get('/signUp', (req,res) => {
   var html = `
   <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%; font-family: 'Comic Sans MS'">Welcome, register as new user here</h2>
   <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
@@ -94,7 +100,7 @@ app.post('/submitUser', async (req,res) => {
   
   // check to see if username or password was blank, redirect to signUp page, with message that fields were blank
   if(username == "" || password == "") {
-    res.redirect("/createUser?blank=true");
+    res.redirect("/signUp?blank=true");
     return;
   }
 
@@ -109,7 +115,7 @@ app.post('/submitUser', async (req,res) => {
 
   if (validationResult.error != null) {
     console.log(validationResult.error);
-    res.redirect("/createUser?invalid=true");
+    res.redirect("/signUp?invalid=true");
     return;
   }
 
