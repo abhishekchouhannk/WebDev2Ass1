@@ -146,6 +146,7 @@ app.post('/submitUser', async (req,res) => {
   req.session.authenticated = true;
   req.session.email = email;
   req.session.cookie.maxAge = expireTime;
+  req.session.name = name;
 
   res.redirect('/members');
 });
@@ -175,15 +176,25 @@ app.get('/members', (req, res) => {
     res.redirect('/login?notLoggedIn=true');
     return;
   }
+
+  // Generate a random number between 1 and 3
+  const randomNum = Math.floor(Math.random() * 3) + 1;
+
+  // Construct the path to the random cat image using string concatenation
+  const imagePath = '/cat' + randomNum + '.gif';
+
   var html = `
-  <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
-    <h1>This is the member's page, for now!</h1>
-    <form action="/">
+  <div style="text-align: center; color: red; font-family: 'Comic Sans MS'; margin-top: 5%;">
+    <h1>Welcome, ${req.session.name} !<br>This is the member's page</h1>
+    <div style='text-align:center;'><img src=${imagePath} style='width:250px; border: 1px solid black;'></div>
+    <div style="margin-top: 2%;">
+      <form action="/">
       <button type="submit">Homepage</button>
-    </form>
-    <form action="/signout">
+      </form>
+      <form action="/signout">
       <button type="submit">Sign out</button>
-    </form>
+      </form>
+    </div>
   </div>
   `;
   res.send(html);
@@ -224,6 +235,8 @@ app.post('/loggingin', async (req,res) => {
     req.session.authenticated = true;
     req.session.email = email;
     req.session.cookie.maxAge = expireTime;
+    // console.log(result[0].name);
+    req.session.name = result[0].name; 
     res.redirect('/members');
   } else {
     //user and password combination not found
