@@ -62,6 +62,7 @@ const port = process.env.PORT || 3020;
 */
 app.get('/', (req, res) => {
   var header = `<h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">Welcome to my app! This is the homepage</h1>`;
+  
   var notLoggedIn = (`
     <div style="text-align: center;">
       <form action="/signUp">
@@ -72,8 +73,22 @@ app.get('/', (req, res) => {
       </form>
     </div>
   `);
+  
+  // check if loggedin, and change content based on whether User has a valid session or not
   if (!req.session.authenticated) {
     res.send(header + notLoggedIn);
+  } else {
+    var loggedIn = `
+    <div style="text-align: center;">
+      <form action="/members">
+        <button type="submit">Member's Page</button>
+      </form>
+      <form action="/signout">
+        <button type="submit">Sign Out</button>
+      </form>
+    </div>
+    `;
+    res.send(header + loggedIn);
   } 
 });
 
@@ -83,35 +98,38 @@ app.get('/signUp', (req,res) => {
   <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
     <h2 style="color: #333; text-align: center;">Sign Up</h2>
     <form action='/submitUser' method='post' style="display: flex; flex-direction: column;">
-    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='name' type='text' placeholder='Name' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='email' type='text' placeholder='Email' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
     <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
     <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
     </form>
-    ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
-    ${req.query.invalid === 'true' ? '<p style="color: red;">Security risk detected with current Username/Password. Please try again.</p>' : ''}
+    ${req.query.blank === 'true' ? '<p style="color: red;">Fields cannot be blank. Please try again.</p>' : ''}
+    ${req.query.invalid === 'true' ? '<p style="color: red;">Invalid Format. Please try again.</p>' : ''}
   </div>
-`;
+  `;
   res.send(html);
 });
 
 app.post('/submitUser', async (req,res) => {
-  var username = req.body.username;
+  var name = req.body.name;
+  var email = req.body.email;
   var password = req.body.password;
   
   // check to see if username or password was blank, redirect to signUp page, with message that fields were blank
-  if(username == "" || password == "") {
+  if(email == "" || password == "" || name == "") {
     res.redirect("/signUp?blank=true");
     return;
   }
 
   const schema = Joi.object(
     {
-      username: Joi.string().alphanum().max(20).required(),
+      name: Joi.string().regex(/^[a-zA-Z ]+$/).max(20).required(),
+      email: Joi.string().email().max(50).required(),
       password: Joi.string().max(20).required()
     }
   );
 
-  const validationResult = schema.validate({username, password});
+  const validationResult = schema.validate({name, email, password});
 
   if (validationResult.error != null) {
     console.log(validationResult.error);
@@ -121,15 +139,15 @@ app.post('/submitUser', async (req,res) => {
 
   var hashedPassword = await bcrypt.hashSync(password, saltRounds);
 
-  await userCollection.insertOne({username: username, password: hashedPassword});
+  await userCollection.insertOne({name: name, email: email, password: hashedPassword});
   console.log("Inserted user");
 
-  var html = `
-  <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
-  <h1>Signed up succesfully!!</h1>
-  </div>
-  `;
-  res.send(html);
+  // grant user a session and set it to be valid
+  req.session.authenticated = true;
+  req.session.email = email;
+  req.session.cookie.maxAge = expireTime;
+
+  res.redirect('/members');
 });
 
 app.get('/login', (req,res) => {
@@ -138,29 +156,50 @@ var html = `
   <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
     <h2 style="color: #333; text-align: center;">Log In</h2>
     <form action='/loggingin' method='post' style="display: flex; flex-direction: column;">
-    <input name='username' type='text' placeholder='Username' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
+    <input name='email' type='text' placeholder='Email' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
     <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
     <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
     </form>
-    ${req.query.incorrect === 'true' ? '<p style="color: red;">Incorrect username or password. Please try again.</p>' : ''}
-    ${req.query.blank === 'true' ? '<p style="color: red;">Username/Password cannot be blank. Please try again.</p>' : ''}
-    ${req.query.invalid === 'true' ? '<p style="color: red;">Security risk detected with current Username/Password. Please try again.</p>' : ''}
+    ${req.query.incorrect === 'true' ? '<p style="color: red;">Email not in record. Sign up please.</p>' : ''}
+    ${req.query.incorrectPass === 'true' ? '<p style="color: red;">Incorrect password. Please try again.</p>' : ''}
+    ${req.query.blank === 'true' ? '<p style="color: red;">Email/Password cannot be blank. Please try again.</p>' : ''}
+    ${req.query.invalid === 'true' ? '<p style="color: red;">Invalid format. Please try again.</p>' : ''}
+    ${req.query.notLoggedIn === 'true' ? '<p style="color: red;">Login to access Member\'s Page.</p>' : ''}
   </div>
 `;
   res.send(html);
 });
 
+app.get('/members', (req, res) => {
+  if (!req.session.authenticated) {
+    res.redirect('/login?notLoggedIn=true');
+    return;
+  }
+  var html = `
+  <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
+    <h1>This is the member's page, for now!</h1>
+    <form action="/">
+      <button type="submit">Homepage</button>
+    </form>
+    <form action="/signout">
+      <button type="submit">Sign out</button>
+    </form>
+  </div>
+  `;
+  res.send(html);
+});
+
 app.post('/loggingin', async (req,res) => {
-  var username = req.body.username;
+  var email = req.body.email;
   var password = req.body.password;
 
-  if(username == "" || password == "") {
+  if(email == "" || password == "") {
     res.redirect("/login?blank=true");
     return;
   }
 
-  const schema = Joi.string().max(20).required();
-  const validationResult = schema.validate(username);
+  const schema = Joi.string().email().max(50).required();
+  const validationResult = schema.validate(email);
   if (validationResult.error != null) {
     console.log(validationResult.error);
     res.redirect("/login?invalid=true");
@@ -168,12 +207,13 @@ app.post('/loggingin', async (req,res) => {
   }
 
   const result = await userCollection.find({
-    username: username
-  }).project({username: 1, password: 1, _id: 1}).toArray();
+    email: email
+  }).project({name: 1, email: 1, password: 1, _id: 1}).toArray();
   console.log(result);
 
   if(result.length != 1) {
     console.log("user not found");
+    // that means user has not registered probably
     res.redirect("/login?incorrect=true");
     return;
   }
@@ -182,31 +222,18 @@ app.post('/loggingin', async (req,res) => {
   if (await bcrypt.compare(password, result[0].password)) {
     console.log("correct password");
     req.session.authenticated = true;
-    req.session.username = username;
+    req.session.email = email;
     req.session.cookie.maxAge = expireTime;
-
-    res.redirect('/loggedIn');
+    res.redirect('/members');
   } else {
     //user and password combination not found
-    res.redirect("/login?incorrect=true");
+    res.redirect("/login?incorrectPass=true");
   }
-});
-
-app.get('/loggedIn', (req,res) => {
-  if (!req.session.authenticated) {
-      res.redirect('/login');
-      return;
-  }
-  var html = `
-  You are logged in!
-  `;
-  res.send(html);
 });
 
 // catches the /about route
 app.get('/about', (req,res) => {
   var color = req.query.color;
-
   res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
 });
 
@@ -229,6 +256,19 @@ app.get('/cat/:id', (req,res) => {
   }
 });
 
+app.get('/signout', (req, res) => {
+  req.session.destroy();
+    var html = `
+    <h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">You are logged out!</h1>
+    <div style="text-align: center;">
+      <form action="/">
+        <button type="submit">Homepage</button>
+      </form>
+    </div>
+    `;
+  res.send(html);
+}); 
+
 app.use(express.static(__dirname + "/public"));
 
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
@@ -241,31 +281,6 @@ app.get("*", (req,res) => {
     </div>
   `);
 });
-
-// app.get('/contact', (req,res) => {
-//   var missingEmail = req.query.missing;
-//   var html = `
-//       email address:
-//       <form action='/submitEmail' method='post'>
-//           <input name='email' type='text' placeholder='email'>
-//           <button>Submit</button>
-//       </form>
-//   `;
-//   if (missingEmail) {
-//       html += "<br> email is required";
-//   }
-//   res.send(html);
-// });
-
-// app.post('/submitEmail', (req,res) => {
-//   var email = req.body.email;
-//   if (!email) {
-//       res.redirect('/contact?missing=1');
-//   }
-//   else {
-//       res.send("Thanks for subscribing with your email: "+email);
-//   }
-// });
 
 /*
   starts the application listening on the specified port ('port') and logs a message to the console
