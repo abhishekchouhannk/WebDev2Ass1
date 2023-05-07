@@ -175,6 +175,15 @@ app.get('/members', (req, res) => {
   res.render('members', {name: req.session.name, imagePath});
 });
 
+app.get('/admin', (req, res) => {
+  if (!req.session.authenticated) {
+    res.redirect('login?notLoggedIn=true');
+    return;
+  }
+  var html = `<h1 style="color: red">This is the admin's page for now!</h1>`;
+  res.send(html);
+});
+
 // catches the /about route
 app.get('/about', (req,res) => {
   res.render('about');
