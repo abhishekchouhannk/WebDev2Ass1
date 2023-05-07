@@ -175,13 +175,10 @@ app.get('/members', (req, res) => {
   res.render('members', {name: req.session.name, imagePath});
 });
 
-app.get('/admin', (req, res) => {
-  if (!req.session.authenticated) {
-    res.redirect('login?notLoggedIn=true');
-    return;
-  }
-  var html = `<h1 style="color: red">This is the admin's page for now!</h1>`;
-  res.send(html);
+app.get('/admin', async (req,res) => {
+  const result = await userCollection.find().project({name: 1, _id: 1}).toArray();
+  console.log(result);
+  res.render("admin", {users: result});
 });
 
 // catches the /about route
