@@ -177,40 +177,12 @@ app.get('/members', (req, res) => {
 
 // catches the /about route
 app.get('/about', (req,res) => {
-  var color = req.query.color;
-  res.send(`<h1 style="color:${color}; text-align: center; margin-top: 10%; font-family: 'Comic Sans MS';">Made by<br>Abhishek Chouhan</h1>`);
-});
-
-//show cat images
-app.get('/cat/:id', (req,res) => {
-
-  var cat = req.params.id;
-
-  if (cat == 1) {
-    res.send("<div style='text-align:center; margin-top: 10%;'>Fluffy:<br><img src='/fluffy.gif' style='width:250px; border: 1px solid black;'></div>");
-      // res.send("Fluffy: <img src='/fluffy.gif' style='width:250px;'>");
-  }
-  else if (cat == 2) {
-    res.send("<div style='text-align:center; margin-top: 10%;'>Socks:<br><img src='/socks.gif' style='width:250px; border: 1px solid black;'></div>");
-    // res.send("Socks: <img src='/socks.gif' style='width:250px;'>");
-  }
-  else {
-    // res.send("Invalid cat id: "+cat);
-    res.send("<div style='text-align:center; background-color: #ffcccc; padding: 10px; border-radius: 5px;'>Invalid cat id: " + cat + "</div>");
-  }
+  res.render('about');
 });
 
 app.get('/signout', (req, res) => {
   req.session.destroy();
-    var html = `
-    <h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">You are logged out!</h1>
-    <div style="text-align: center;">
-      <form action="/">
-        <button type="submit">Homepage</button>
-      </form>
-    </div>
-    `;
-  res.send(html);
+  res.render('signout');
 }); 
 
 app.use(express.static(__dirname + "/public"));
