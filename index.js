@@ -41,6 +41,8 @@ var mongoStore = MongoStore.create({
 	}
 });
 
+app.set('view engine', 'ejs');
+
 app.use(session({ 
   secret: node_session_secret,
 	store: mongoStore, //default is memory store 
@@ -61,35 +63,7 @@ const port = process.env.PORT || 3020;
   Response go to the webpage.
 */
 app.get('/', (req, res) => {
-  var header = `<h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">Welcome to my app! This is the homepage</h1>`;
-  
-  var notLoggedIn = (`
-    <div style="text-align: center;">
-      <form action="/signUp">
-        <button type="submit">Sign Up</button>
-      </form>
-      <form action="/login">
-        <button type="submit">Login</button>
-      </form>
-    </div>
-  `);
-  
-  // check if loggedin, and change content based on whether User has a valid session or not
-  if (!req.session.authenticated) {
-    res.send(header + notLoggedIn);
-  } else {
-    var loggedIn = `
-    <div style="text-align: center;">
-      <form action="/members">
-        <button type="submit">Member's Page</button>
-      </form>
-      <form action="/signout">
-        <button type="submit">Sign Out</button>
-      </form>
-    </div>
-    `;
-    res.send(header + loggedIn);
-  } 
+  res.render('homepage', {session: req.session});
 });
 
 app.get('/signUp', (req,res) => {
