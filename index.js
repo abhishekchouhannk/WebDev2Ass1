@@ -70,6 +70,7 @@ app.get('/signUp', (req,res) => {
   res.render('signUp', {req: req});
 });
 
+// new user info validation and addition
 app.post('/submitUser', async (req,res) => {
   var name = req.body.name;
   var email = req.body.email;
@@ -112,23 +113,7 @@ app.post('/submitUser', async (req,res) => {
 });
 
 app.get('/login', (req,res) => {
-var html = `
-  <h2 style="width: 400px; margin: 0 auto; margin-top: 5%; margin-bottom: 5%; font-family: 'Comic Sans MS'">Welcome, Here you can log in to the app.</h2>
-  <div style="background-color: rgba(0, 0, 255, 0.2); padding: 20px; width: 400px; margin: 0 auto; border-radius: 10px;">
-    <h2 style="color: #333; text-align: center;">Log In</h2>
-    <form action='/loggingin' method='post' style="display: flex; flex-direction: column;">
-    <input name='email' type='text' placeholder='Email' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
-    <input name='password' type='password' placeholder='Password' style="padding: 10px; margin-bottom: 10px; border: none; border-radius: 5px;">
-    <button style="background-color: #007bff; color: #fff; padding: 10px; border: none; border-radius: 5px;">Submit</button>
-    </form>
-    ${req.query.incorrect === 'true' ? '<p style="color: red;">Email not in record. Sign up please.</p>' : ''}
-    ${req.query.incorrectPass === 'true' ? '<p style="color: red;">Incorrect password. Please try again.</p>' : ''}
-    ${req.query.blank === 'true' ? '<p style="color: red;">Email/Password cannot be blank. Please try again.</p>' : ''}
-    ${req.query.invalid === 'true' ? '<p style="color: red;">Invalid format. Please try again.</p>' : ''}
-    ${req.query.notLoggedIn === 'true' ? '<p style="color: red;">Login to access Member\'s Page.</p>' : ''}
-  </div>
-`;
-  res.send(html);
+  res.render('login', {req});
 });
 
 app.get('/members', (req, res) => {
