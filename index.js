@@ -232,12 +232,7 @@ app.use(express.static(__dirname + "/public"));
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
 app.get("*", (req,res) => {
 	res.status(404);
-	res.send(`
-    <div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
-      <h1>Sorry, This page does not exist - 404</h1>
-      <h3>You might want to check your URL ^_^</h3>
-    </div>
-  `);
+  res.render('404');
 });
 
 /*
