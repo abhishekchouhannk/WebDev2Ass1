@@ -67,7 +67,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/signUp', (req,res) => {
-  res.render('signUp', {req: req});
+  res.render('signUp', {req});
 });
 
 // new user info validation and addition
@@ -116,35 +116,6 @@ app.get('/login', (req,res) => {
   res.render('login', {req});
 });
 
-app.get('/members', (req, res) => {
-  if (!req.session.authenticated) {
-    res.redirect('/login?notLoggedIn=true');
-    return;
-  }
-
-  // Generate a random number between 1 and 3
-  const randomNum = Math.floor(Math.random() * 3) + 1;
-
-  // Construct the path to the random cat image using string concatenation
-  const imagePath = '/cat' + randomNum + '.gif';
-
-  var html = `
-  <div style="text-align: center; color: red; font-family: 'Comic Sans MS'; margin-top: 5%;">
-    <h1>Welcome, ${req.session.name} !<br>This is the member's page</h1>
-    <div style='text-align:center;'><img src=${imagePath} style='width:250px; border: 1px solid black;'></div>
-    <div style="margin-top: 2%;">
-      <form action="/">
-      <button type="submit">Homepage</button>
-      </form>
-      <form action="/signout">
-      <button type="submit">Sign out</button>
-      </form>
-    </div>
-  </div>
-  `;
-  res.send(html);
-});
-
 app.post('/loggingin', async (req,res) => {
   var email = req.body.email;
   var password = req.body.password;
@@ -165,7 +136,7 @@ app.post('/loggingin', async (req,res) => {
   const result = await userCollection.find({
     email: email
   }).project({name: 1, email: 1, password: 1, _id: 1}).toArray();
-  console.log(result);
+  // console.log(result);
 
   if(result.length != 1) {
     console.log("user not found");
@@ -176,7 +147,7 @@ app.post('/loggingin', async (req,res) => {
 
   // check if password matches for the username found in the database
   if (await bcrypt.compare(password, result[0].password)) {
-    console.log("correct password");
+    console.log("correct password, true");
     req.session.authenticated = true;
     req.session.email = email;
     req.session.cookie.maxAge = expireTime;
@@ -187,6 +158,21 @@ app.post('/loggingin', async (req,res) => {
     //user and password combination not found
     res.redirect("/login?incorrectPass=true");
   }
+});
+
+app.get('/members', (req, res) => {
+  if (!req.session.authenticated) {
+    res.redirect('/login?notLoggedIn=true');
+    return;
+  }
+
+  // Generate a random number between 1 and 3
+  const randomNum = Math.floor(Math.random() * 3) + 1;
+
+  // Construct the path to the random cat image using string concatenation
+  const imagePath = '/cat' + randomNum + '.gif';
+  
+  res.render('members', {name: req.session.name, imagePath});
 });
 
 // catches the /about route
