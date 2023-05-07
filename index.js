@@ -176,6 +176,11 @@ app.get('/members', (req, res) => {
 });
 
 app.get('/admin', async (req,res) => {
+  if (!req.session.authenticated) {
+    res.redirect('/login?notLoggedIn=true');
+    return;
+  }
+
   const result = await userCollection.find().project({name: 1, _id: 1}).toArray();
   console.log(result);
   res.render("admin", {users: result});
