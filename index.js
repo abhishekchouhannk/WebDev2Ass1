@@ -66,6 +66,25 @@ app.get('/', (req, res) => {
   res.render('homepage', {session: req.session});
 });
 
+function sessionValidation(req, res, next) {
+  if (req.session.authenticated) {
+    console.log("Session authorized");
+    next();
+  } else {
+    res.redirect("login?notLoggedIn=true");
+  }
+}
+
+async function adminAuthorization(req, res, next) {
+  const result = await userCollection.find().project({name: 1, email: 1, type: 1, _id: 1}).toArray();
+  for (i = 0; i < result.length; i++) {
+    if (result[i].email == req.session.email && result[i].type == "admin") {
+      return next();
+    }
+  }
+  res.render('unauthorized');
+}
+
 app.get('/signUp', (req,res) => {
   res.render('signUp', {req});
 });
@@ -100,8 +119,7 @@ app.post('/submitUser', async (req,res) => {
 
   var hashedPassword = await bcrypt.hashSync(password, saltRounds);
 
-  await userCollection.insertOne({name: name, email: email, password: hashedPassword});
-  console.log("Inserted user");
+  await userCollection.insertOne({name: name, email: email, password: hashedPassword, type: 'user'});
 
   // grant user a session and set it to be valid
   req.session.authenticated = true;
@@ -136,10 +154,8 @@ app.post('/loggingin', async (req,res) => {
   const result = await userCollection.find({
     email: email
   }).project({name: 1, email: 1, password: 1, _id: 1}).toArray();
-  // console.log(result);
 
   if(result.length != 1) {
-    console.log("user not found");
     // that means user has not registered probably
     res.redirect("/login?incorrect=true");
     return;
@@ -147,11 +163,9 @@ app.post('/loggingin', async (req,res) => {
 
   // check if password matches for the username found in the database
   if (await bcrypt.compare(password, result[0].password)) {
-    console.log("correct password, true");
     req.session.authenticated = true;
     req.session.email = email;
     req.session.cookie.maxAge = expireTime;
-    // console.log(result[0].name);
     req.session.name = result[0].name; 
     res.redirect('/members');
   } else {
@@ -160,30 +174,40 @@ app.post('/loggingin', async (req,res) => {
   }
 });
 
-app.get('/members', (req, res) => {
-  if (!req.session.authenticated) {
-    res.redirect('/login?notLoggedIn=true');
-    return;
-  }
+app.get('/members', sessionValidation, (req, res) => {
 
   // Generate a random number between 1 and 3
   const randomNum = Math.floor(Math.random() * 3) + 1;
 
   // Construct the path to the random cat image using string concatenation
-  const imagePath = '/cat' + randomNum + '.gif';
+  const imagePath = '/public/cat' + randomNum + '.gif';
   
   res.render('members', {name: req.session.name, imagePath});
 });
 
-app.get('/admin', async (req,res) => {
-  if (!req.session.authenticated) {
-    res.redirect('/login?notLoggedIn=true');
-    return;
-  }
-
-  const result = await userCollection.find().project({name: 1, _id: 1}).toArray();
-  console.log(result);
+app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
+  const result = await userCollection.find().project({name: 1, email: 1, type: 1, _id: 1}).toArray();
   res.render("admin", {users: result});
+});
+
+app.post('/promoteUser', sessionValidation, adminAuthorization, async(req, res) => {
+  const userEmail = req.body.email; // assuming you have this value from the request body
+
+  userCollection.updateOne(
+    { email: userEmail },
+    { $set: { type: "admin" } }
+  );
+  res.redirect('/admin');
+});
+
+app.post('/demoteUser', sessionValidation, adminAuthorization, async(req, res) => {
+  const userEmail = req.body.email; // assuming you have this value from the request body
+
+  userCollection.updateOne(
+    { email: userEmail },
+    { $set: { type: "user" } }
+  );
+  res.redirect('/admin');
 });
 
 // catches the /about route
@@ -196,7 +220,7 @@ app.get('/signout', (req, res) => {
   res.render('signout');
 }); 
 
-app.use(express.static(__dirname + "/public"));
+app.use(express.static(__dirname));
 
 // redirect all other mistakes by user (pages that do not exist) to a meaningful warning
 app.get("*", (req,res) => {
