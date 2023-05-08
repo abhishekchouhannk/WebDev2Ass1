@@ -1,5 +1,5 @@
 <%- include("templates/header") %> 
-<div style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">
+<div style="text-align: center; margin-top: 5%; color: red; font-family: 'Comic Sans MS';">
     <h1>Welcome, this is the admin's page.</h1>
     <h3>Here is a list of current users ^_^</h3>
     <ul>
@@ -8,5 +8,19 @@
         <%- include('templates/user', {user: users[i]})  %> 
         <% } %> 
     </ul>
+</div>
+<br>
+<div styl="font-family: 'Comic Sans MS'; margin-top: 10px;"></div>
+    <form action="/" class="text-center">
+        <button type="submit">Homepage</button>
+    </form>
+    <br>
+    <form action="/members" class="text-center">
+        <button type="submit">Member's Page</button>
+    </form>
+    <br>
+    <form action="/signout" class="text-center">
+        <button type="submit">Sign out</button>
+    </form>
 </div>
 <%- include("templates/footer") %>

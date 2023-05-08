@@ -1,7 +1,7 @@
 <%- include("templates/header") %>
 
 <!-- homepage.ejs -->
-<h1 style="text-align: center; margin-top: 10%; color: red; font-family: 'Comic Sans MS'; margin-top: 10%;">Welcome to my app! This is the homepage</h1>
+<h1 style="text-align: center; margin-top: 10%; font-family: 'Comic Sans MS'; margin-top: 10%;" class="alert alert-info">Welcome to my app! This is the homepage</h1>
 
 <!-- check if loggedin, and change content based on whether User has a valid session or not-->
 <% if (!session.authenticated) { %>
@@ -18,6 +18,10 @@
   <div style="text-align: center;">
     <form action="/members">
       <button type="submit">Member's Page</button>
+    </form>
+    <br>
+    <form action="/admin">
+      <button type="submit">Admin's Page</button>
     </form>
     <br>
     <form action="/signout">

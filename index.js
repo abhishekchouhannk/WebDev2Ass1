@@ -176,13 +176,13 @@ app.post('/loggingin', async (req,res) => {
 
 app.get('/members', sessionValidation, (req, res) => {
 
-  // Generate a random number between 1 and 3
-  const randomNum = Math.floor(Math.random() * 3) + 1;
+  // // Generate a random number between 1 and 3
+  // const randomNum = Math.floor(Math.random() * 3) + 1;
 
-  // Construct the path to the random cat image using string concatenation
-  const imagePath = '/public/cat' + randomNum + '.gif';
+  // // Construct the path to the random cat image using string concatenation
+  // const imagePath = '/public/cat' + randomNum + '.gif';
   
-  res.render('members', {name: req.session.name, imagePath});
+  res.render('members', {name: req.session.name});
 });
 
 app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
