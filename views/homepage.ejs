@@ -7,21 +7,21 @@
 <% if (!session.authenticated) { %>
   <div style="text-align: center;">
     <form action="/signUp">
-      <button type="submit">Sign Up</button>
+      <button type="submit" class="btn btn-primary">Sign Up</button>
     </form>
     <br>
     <form action="/login">
-      <button type="submit">Login</button>
+      <button type="submit" class="btn btn-light" style="border-color: black;">Login</button>
     </form>
   </div>
 <% } else { %>
   <div style="text-align: center;">
     <form action="/members">
-      <button type="submit">Member's Page</button>
+      <button type="submit" class="btn btn-secondary">Member's Page</button>
     </form>
     <br>
     <form action="/admin">
-      <button type="submit">Admin's Page</button>
+      <button type="submit" class="btn btn-secondary">Admin's Page</button>
     </form>
     <br>
     <form action="/signout">

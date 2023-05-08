@@ -69,7 +69,7 @@ app.get('/', (req, res) => {
 function sessionValidation(req, res, next) {
   if (req.session.authenticated) {
     console.log("Session authorized");
-    next();
+    return next();
   } else {
     res.redirect("login?notLoggedIn=true");
   }
